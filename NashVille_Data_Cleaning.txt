@@ -1,0 +1,235 @@
+/* Project Description : 
+
+This is a data cleaning project executed by Muhammd Mustafa Jamil, The dataset is taken from an online source and consists of real estate data values of Nashville.
+This project uses Intermediate/Advanced SQL queries to clean the data for further visualisations.
+
+>>CRUD Command
+>>Local Infile Commands To Insert Heavy Data Sets
+>>Casting/Converting Columns
+>>Substrings
+>>Substring Indexing
+>>Joins 
+>>Case Statements
+>>Order By / Where Clause
+>>Crud Commands
+>>Partition By
+>>ALTER
+
+-->> NOTE: Please remove the limit for the rows to display for simplicity. You can toggle the LIMIT clause added by MySQL Workbench via the SQL Editor tab within the application preferences (Edit menu -> Preferences...).
+Simply un-check the "Limit Rows" option within the Query Results section
+
+
+*/
+
+-- Project Starts here
+
+SHOW DATABASES;
+CREATE DATABASE cleaningproject;
+USE cleaningProject;
+
+SHOW TABLES;
+
+-- Importing the dataset using "LOCAL INFILE METHOD" as its faster and reliable.
+-- Data was in a CSV file
+
+LOAD DATA LOCAL INFILE "C:/Users/mjnon/Downloads/Nashvilledata.csv" INTO TABLE nashvilledata 
+FIELDS TERMINATED BY ',' ENCLOSED BY '"'
+LINES TERMINATED BY '\r\n'
+IGNORE 1 LINES ;
+
+SHOW TABLES;
+
+-- CHANGE THE LIMIT ROWS --> "NO LIMIT"
+
+-- STARTING DATA CLEANING
+
+SELECT * FROM nashvilledata;
+
+-- *Standarise Date Format* -- USING CASTING CONCEPT 
+
+SELECT SaleDate, CAST(SaleDate AS DATE) AS SaleDate FROM nashvilledata;  
+
+-- *Standarise Date Format* -- USING ALTER CONCEPT 
+
+ALTER TABLE nashvilledata Modify SaleDate DATE;
+
+-- CHECK TO SEE DESRIED RESULT
+
+SELECT SaleDate FROM nashvilledata;
+
+-- Populate Property Address data
+-- This data set has so many rows for the 'Property Address' which are empty however matches another column.
+-- We are populating those rows to shape the data set.
+
+SELECT * from nashvilledata where Propertyaddress ='';
+
+SELECT * FROM nashvilledata ORDER BY parcelID; -- Duplicated ParcelID found
+
+-- FORMING A JOIN ON SAME TABLE
+
+SELECT * FROM nashvilledata A JOIN nashvilledata B on A.parcelID = b.ParcelID WHERE A.parcelID = B.ParcelID AND A.UniqueID != B.UniqueID;
+
+-- FURTHER SORTING/CLEANING DATA
+
+SELECT  a.uniqueID, a.parcelid, a.propertyAddress, b.UniqueID, b.parcelID, b.propertyaddress 
+FROM nashvilledata A 
+JOIN nashvilledata B on 
+A.parcelID = b.ParcelID 
+And A.UniqueID != B.UniqueID;
+
+-- FURTHER CLEANING WITH WHERE CLAUSE
+
+
+SELECT  a.uniqueID, a.parcelid, a.propertyAddress, b.UniqueID, b.parcelID, b.propertyaddress 
+FROM nashvilledata A 
+JOIN nashvilledata B 
+on A.parcelID = b.ParcelID 
+AND A.UniqueID != B.UniqueID
+WHERE A.propertyaddress ='';
+
+-- UPDATING THE THE "PROPERTY ADDRESS COLUMN" WITH CORRECT VALUES
+
+UPDATE nashvilledata
+INNER JOIN nashvilledata B 
+ON nashvilledata.ParcelID  = B.parcelID 
+AND nashvilledata.uniqueID != B.uniqueId
+SET 
+nashvilledata.propertyaddress = B.propertyaddress
+WHERE nashvilledata.propertyaddress = '';
+
+/* STOP HERE. FRIENDLY REMINDER TIME :D 
+
+When you try to execute the above update statement, it is highly likely that it will give you a safe check error and won't execute the statement. 
+This is because SQL has a safe check that dont let you delete/update large amounts of data because it's unretrievable and once it's deleted/updated the old data is gone forever from the workbench and doing that by mistake can cause a lot of problems. 
+However this check could be removed by a simple statement given below. :D
+
+*/
+
+
+SET SQL_SAFE_UPDATES = 0; -- safe mode off
+
+-- BREAKING OUT ADDRESS INTO INDIVIDUAL COLUMMS (ADDRESS, CITY, STATE)
+-- FOR PROPERTY ADDRESS 
+
+
+Select propertyAddress From nashvilledata;
+-- USE OF SUBSTRING / SUBSTRING INDEXING 
+SELECT 
+SUBSTRING(Propertyaddress, 1 , LOCATE(',', propertyaddress) -1) AS address,
+SUBSTRING(Propertyaddress, LOCATE(',', propertyaddress) +1  , Length(propertyaddress) ) AS address
+From nashvilledata;
+
+ALTER TABLE Nashvilledata ADD PropertySplitAddress VARCHAR(255);
+UPDATE nashvilledata SET PropertySplitAddress = SUBSTRING(Propertyaddress, 1 , LOCATE(',', propertyaddress) -1);
+
+
+ALTER TABLE Nashvilledata ADD PropertySplitCITY VARCHAR(255);
+UPDATE nashvilledata SET PropertySplitcity = SUBSTRING(Propertyaddress, LOCATE(',', propertyaddress) +1  , Length(propertyaddress) );
+
+SELECT PropertySplitAddress, PropertySplitCity FROM nashvilledata;
+
+
+SELECT * FROM nashvilledata;
+
+-- FOR OWNER ADDRESS
+
+
+SELECT OwnerAddress FROM nashvilledata;
+
+SELECT
+  SUBSTRING_INDEX(OwnerAddress,',', 1) AS Address, 
+  SUBSTR(OwnerAddress, LOCATE(',',OwnerAddress)+1, (CHAR_LENGTH(OwnerAddress) - LOCATE(',',REVERSE(OwnerAddress)) - LOCATE(',',OwnerAddress))) AS City,
+  SUBSTRING_INDEX(OwnerAddress,' ', -1) AS State 
+  FROM nashvilledata;
+  
+  
+  ALTER TABLE Nashvilledata ADD OwnerSplitAddress VARCHAR(255);
+UPDATE nashvilledata SET OwnerSplitAddress = SUBSTRING_INDEX(OwnerAddress,',', 1);
+
+
+ALTER TABLE Nashvilledata ADD OwnerSplitCITY VARCHAR(255);
+UPDATE nashvilledata SET OwnerSplitCITY = SUBSTR(OwnerAddress, LOCATE(',',OwnerAddress)+1, (CHAR_LENGTH(OwnerAddress) - LOCATE(',',REVERSE(OwnerAddress)) - LOCATE(',',OwnerAddress)));
+  
+
+ALTER TABLE Nashvilledata ADD OwnerSplitState VARCHAR(255);
+UPDATE nashvilledata SET OwnerSplitState = SUBSTRING_INDEX(OwnerAddress,' ', -1);
+
+
+SELECT * FROM nashvilledata;
+
+-- CHANGE Y AND N TO ES AND NO IN 'SOLD AS VACANT" FIELD -- CASE STATMENTS
+
+
+SELECT Distinct(soldasvacant) FROM nashvilledata;
+
+SELECT COUNT(soldasvacant) FROM nashvilledata;
+
+SELECT soldasvacant,COUNT(soldasvacant) FROM nashvilledata GROUP BY soldasvacant ORDER BY 2;
+
+SELECT soldasvacant,
+CASE
+    WHEN soldasvacant = 'Y' THEN 'Yes'
+    WHEN soldasvacant = 'N'THEN 'NO'
+    ELSE soldasvacant
+END AS 'CASE'
+FROM nashvilledata;
+
+
+UPDATE nashvilledata SET soldasvacant =
+CASE
+    WHEN soldasvacant = 'Y' THEN 'Yes'
+    WHEN soldasvacant = 'N'THEN 'NO'
+    ELSE soldasvacant
+END;
+
+
+-- REMOVE DUPLICATES
+
+SELECT * FROM Nashvilledata;
+
+
+WITH RowNumCTE AS(
+select * , ROW_NUMBER() OVER(
+partition BY parcelID,
+Propertyaddress,
+saleprice,
+saledate,
+legalreference
+ORDER BY UniqueID) AS Row_num
+FROM nashvilledata)
+
+SELECT * FROM RowNumCTE;
+
+ -- FINDING DUPLICATES
+ 
+WITH RowNumCTE AS(
+select * , ROW_NUMBER() OVER(
+partition BY parcelID,
+Propertyaddress,
+saleprice,
+saledate,
+legalreference
+ORDER BY UniqueID) AS Row_num
+FROM nashvilledata)
+
+SELECT * FROM RowNumCTE where row_num >1;
+
+-- DELETING
+
+WITH RowNumCTE AS(
+select * , ROW_NUMBER() OVER(
+partition BY parcelID,
+Propertyaddress,
+saleprice,
+saledate,
+legalreference
+) AS Row_num
+FROM nashvilledata)
+
+DELETE FROM RowNumCTE where Row_num >1 ;
+
+-- DELETE UNUSED COLUMNS -- THERE ARE SOME COLUMNS WHICH ARE TOTALLY USELESS AND DONT HAVE ANY IMPORTANCE IN THE DATA SET.
+
+ALTER TABLE Nashvilledata DROP COLUMN TaxDistrict;
+
+SELECT * FROM Nashvilledata;
