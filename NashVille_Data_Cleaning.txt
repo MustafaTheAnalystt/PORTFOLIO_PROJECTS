@@ -1,6 +1,6 @@
 /* Project Description : 
 
-This is a data cleaning project executed by Muhammd Mustafa Jamil, The dataset is taken from an online source and consists of real estate data values of Nashville.
+This is a data cleaning project executed by Muhammd Mustafa Jamil, The dataset is taken from an online source and consists of real estate data values from Nashville.
 This project uses Intermediate/Advanced SQL queries to clean the data for further visualisations.
 
 >>CRUD Command
