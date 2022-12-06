@@ -9,6 +9,7 @@ This project uses Intermediate/Advanced SQL queries to clean/explore the data fo
 >>Order By / Where Clause
 >>Crud Commands
 >> SUM / MAX 
+>> CASE Statement
 
 -->> NOTE: Please remove the limit for the rows to display for simplicity. You can toggle the LIMIT clause added by MySQL Workbench via the SQL Editor tab within the application preferences (Edit menu -> Preferences...).
 Simply un-check the "Limit Rows" option within the Query Results section
