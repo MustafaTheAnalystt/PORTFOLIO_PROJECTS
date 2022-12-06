@@ -1,0 +1,186 @@
+/* Project Description : 
+
+This is a data exploration/ Cleaning project executed by Muhammd Mustafa Jamil, The dataset is taken from Hochshule-Rhein Waal and consists of Nitrate content data values all around the North-Rhein WestPhalia
+This project uses Intermediate/Advanced SQL queries to clean/explore the data for further visualisations.
+
+>>CRUD Command
+>>Local Infile Commands To Insert Heavy Data Sets
+>>Casting/Converting Columns 
+>>Order By / Where Clause
+>>Crud Commands
+>> SUM / MAX 
+
+-->> NOTE: Please remove the limit for the rows to display for simplicity. You can toggle the LIMIT clause added by MySQL Workbench via the SQL Editor tab within the application preferences (Edit menu -> Preferences...).
+Simply un-check the "Limit Rows" option within the Query Results section
+
+
+*/
+
+SELECT DATABASE();
+
+SHOW TABLES;
+
+SELECT * FROM nitratedata;
+
+-- Inserting The data using Local infile method
+
+LOAD DATA LOCAL INFILE "C:/Users/mjnon/Downloads/df_merged_new.csv" INTO TABLE nitratedata FIELDS TERMINATED BY ',' ENCLOSED BY '"'
+LINES TERMINATED BY '\r\n'
+IGNORE 1 LINES ;
+
+
+ -- Project starts here
+ 
+ 
+ -- CHANGING THE COLUMN NAME WHICH WAS DISRUPTED WHILE LOADING DATA
+ 
+ALTER TABLE nitratedata RENAME COLUMN ï»¿measuring_point_id TO Measuring_point_ID;
+
+SELECT * FROM nitratedata; -- Checking if its done correctly
+
+-- THERE ARE ALOT OF VALUES IN THIS DATA SET WHICH ARE BELOW 5 mg/l and it typically ruins the AVG values  so I am removing them
+
+SELECT * FROM nitratedata WHERE measurement_result < 5 ;
+
+-- There are 161127 rows in our data set which have a very low nitrate value and hence its good to remove them as they are inaccurate / outliers
+
+DELETE FROM nitratedata WHERE measurement_result < 5; -- This wont execute as deleting large amounts of data is unreversable, So Check the safe mode = 0;
+
+-- Safe mode = 0
+
+SET SQL_SAFE_UPDATES = 0;
+
+-- Now lets try
+
+DELETE FROM nitratedata WHERE measurement_result < 5; -- Perfect
+
+SELECT * FROM nitratedata;
+
+-- Lets explore the limits of the data ( date span)
+
+SELECT MAX(sampling_date), MIN(sampling_date) FROM nitratedata;
+
+-- The MIN date was back in 1960, We dont need the data earlier than the last 30 years
+-- Further cleaning data to get only last 20 years
+
+
+SELECT sampling_date FROM nitratedata WHERE sampling_date < '1990-01-1' ORDER BY sampling_date;
+
+
+
+-- DELETING THAT DATA
+
+DELETE FROM nitratedata WHERE sampling_date < '1990-01-1';
+
+SELECT * FROM nitratedata ORDER BY sampling_date;
+
+
+-- Deleting the columms which are unused
+
+ALTER TABLE nitratedata
+DROP COLUMN sampling_id; 
+
+ALTER TABLE nitratedata
+DROP COLUMN measurement_note;
+
+ALTER TABLE nitratedata
+DROP COLUMN examination_procedure;
+
+ALTER TABLE nitratedata
+DROP COLUMN measurement_origin;
+
+ALTER TABLE nitratedata
+DROP COLUMN substance_name;
+
+ALTER TABLE nitratedata
+DROP COLUMN reason_messstelle_implementation;
+
+-- CASE STATMENTS
+
+SELECT water_level_measuring_point, COUNT(water_level_measuring_point) from nitratedata GROUP By water_level_measuring_point;
+
+UPDATE nitratedata SET water_level_measuring_point = CASE 
+WHEN water_level_measuring_point = 'ja' THEN 'YES'
+WHEN water_level_measuring_point = 'nein' THEN 'NO'
+ELSE water_level_measuring_point END;
+
+SELECT * FROM nitratedata ORDER BY sampling_date;
+
+-- CHANGING THE DATETIME TO DATE
+
+
+SELECT CAST(sampling_date AS DATE) FROM nitratedata;
+
+ALTER TABLE nitratedata MODIFY sampling_date DATE;
+SELECT * FROM nitratedata ORDER BY sampling_date;
+
+-- CHANGING SOME ROWS USING CASE STATMENTS
+
+SELECT Sample_material, COUNT(Sample_material) from nitratedata GROUP By Sample_material;
+
+UPDATE nitratedata SET Sample_material = CASE 
+WHEN Sample_material = 'Grundwasser' THEN 'Ground Water'
+ELSE Sample_material END;
+
+
+-- DATA IS CLEANED, LETS START EXPLORING THE DATA
+
+-- Lets see the cities with highest nitrates data points
+
+SELECT city, MAX(measurement_result) AS Max_Values FROM nitratedata GROUP by city ORDER BY 2 DESC;
+
+-- LETS SEE THE AVG VALUES
+
+SELECT city, AVG(measurement_result) AS AVG FROM nitratedata GROUP by city ORDER BY 2 DESC;
+
+
+-- LETS BREAK DOWN AVG VALUES FUTHER BY QUARTERS IN THE YEAR
+
+SELECT city, AVG(measurement_result) AS AVG, quarter(sampling_date) AS Quarter FROM nitratedata GROUP by city, quarter ORDER BY City, 3 ;
+
+-- LETS SEE WHICH QUARTER HAS THE HIGHEST AVG VALUES
+
+SELECT AVG(measurement_result) AS AVG, quarter(sampling_date) AS QUARTER FROM nitratedata GROUP BY quarter(sampling_date) ORDER BY 2; -- Almost every quarter has the same value, INTERESTING
+
+-- We have some points of cities which are our points of interests
+-- Lets see their avg values grouped by quarters 
+
+
+-- FOR Kamp-lintfort
+SELECT AVG(measurement_result) AS AVG, quarter(sampling_date) AS QUARTER FROM nitratedata WHERE city = 'Kamp-lintfort' GROUP BY quarter(sampling_date) ORDER BY 2;
+
+-- For Moers
+SELECT AVG(measurement_result) AS AVG, quarter(sampling_date) AS QUARTER FROM nitratedata WHERE city = 'Moers' GROUP BY quarter(sampling_date) ORDER BY 2;
+
+-- For Straelen
+SELECT AVG(measurement_result) AS AVG, quarter(sampling_date) AS QUARTER FROM nitratedata WHERE city = 'Straelen' GROUP BY quarter(sampling_date) ORDER BY 2;
+
+-- FOR Duisburg
+SELECT AVG(measurement_result) AS AVG, quarter(sampling_date) AS QUARTER FROM nitratedata WHERE city = 'Duisburg' GROUP BY quarter(sampling_date) ORDER BY 2;
+
+-- FOR Rheinberg
+SELECT AVG(measurement_result) AS AVG, quarter(sampling_date) AS QUARTER FROM nitratedata WHERE city = 'Rheinberg' GROUP BY quarter(sampling_date) ORDER BY 2;
+
+-- FOR Dinslaken
+SELECT AVG(measurement_result) AS AVG, quarter(sampling_date) AS QUARTER FROM nitratedata WHERE city = 'Dinslaken' GROUP BY quarter(sampling_date) ORDER BY 2;
+
+-- FOR Neukirchen-vluyn
+SELECT AVG(measurement_result) AS AVG, quarter(sampling_date) AS QUARTER FROM nitratedata WHERE city = 'Neukirchen-vluyn' GROUP BY quarter(sampling_date) ORDER BY 2;
+
+-- Alright, we have some cities now that we can further play with
+-- Further exploring the data
+
+-- As we know that the safe levels of nitrate content is 50mg/l and cant be greater than that
+-- lets see some values that are in the danger zone
+
+SELECT city, measurement_result from nitratedata where measurement_result > 50;
+
+-- Further breaking it down by quarters
+
+SELECT city, measurement_result, quarter(sampling_date) from nitratedata where measurement_result > 50 ORDER BY city,quarter(sampling_date);
+
+-- Lets see the max points and their quarters
+
+SELECT city, MAX(measurement_result) AS Max_Values, quarter(sampling_date) AS Qtr FROM nitratedata GROUP by city ORDER BY 2 DESC;
+
+
