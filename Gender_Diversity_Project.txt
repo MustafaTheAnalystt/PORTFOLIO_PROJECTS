@@ -1,0 +1,86 @@
+-- Creating databases and loading the data
+
+USE borse_assignment;
+SELECT DATABASE();
+SHOW TABLES;
+SELECT * FROM diversity;
+SET SQL_SAFE_UPDATES=0;
+DELETE FROM diversity;
+SET GLOBAL local_infile=1;
+
+LOAD DATA LOCAL INFILE "C:/Users/mjnon/Downloads/Diversity_Assignment2022 (1).csv" INTO TABLE Diversity FIELDS TERMINATED BY ',' ENCLOSED BY '"'
+LINES TERMINATED BY '\r\n'
+IGNORE 1 LINES ;
+ 
+ -- Data Exploration starts here
+ 
+DESC Diversity; -- Describing the nature of the table
+
+SELECT COUNT(*) FROM Diversity; -- Total Rows in the dataset
+
+SELECT DISTINCT(Gender), Count(Gender) FROM Diversity GROUP BY Gender; -- Missing Values
+
+SELECT location, COUNT(location) from diversity where Gender = 0; -- All ambuiguty was from frankfurt (ANOMALY # 1)
+
+SELECT DISTINCT(Gender), Count(Gender), (COUNT(Gender) / 442 )* 100 AS Percentage FROM Diversity GROUP BY Gender; -- Overall diversity in percentage
+
+SELECT DISTINCT(Location), COUNT(Gender) FROM Diversity WHERE Gender = 1 GROUP BY Location;
+
+SELECT DISTINCT(Location), COUNT(Gender) FROM Diversity WHERE Gender = 2 GROUP BY Location;
+
+
+SELECT location, 
+       gender, 
+       COUNT(*) as count, 
+       (COUNT(*)/(SELECT COUNT(*) FROM Diversity WHERE location = diversity.location))*100 as percentage 
+FROM diversity
+GROUP BY location, gender
+ORDER BY Location;  -- Gender count by location (M AND F)
+
+SELECT Distinct(Headcount) FROM diversity; -- Answers shows 0.2 and 0.8 values in headcount (ANOMALY # 2)
+
+SELECT Distinct(Headcount), Count(headcount) AS Count FROM diversity GROUP BY Headcount; -- Checking Headcount ambiguity
+
+SELECT distinct (`Job Classification`)  FROM diversity;-- Checking distinct Job classes
+
+SELECT DISTINCT(`Job Classification`), COUNT(`Job Classification`) AS Count FROM diversity GROUP BY `Job Classification` ORDER BY Count DESC; 
+
+SELECT DISTINCT(`Job Classification`), COUNT(Gender)  FROM Diversity WHERE GENDER = 1 GROUP BY `Job Classification`; -- Job classification for M
+SELECT DISTINCT(`Job Classification`), COUNT(Gender)  FROM Diversity WHERE GENDER = 2 GROUP BY `Job Classification`; -- Job classification for F
+
+SELECT `Job Classification`, 
+       gender, 
+       COUNT(*) as count, 
+       (COUNT(*)/(SELECT COUNT(*) FROM Diversity WHERE `Job Classification` = diversity.`Job Classification`))*100 as percentage 
+FROM diversity
+GROUP BY `Job Classification`, gender
+order by `Job Classification`; -- Gender count by Job class (M AND F)
+
+SELECT DISTINCT `Position Job Level` FROM diversity; -- Exploring Job level types
+
+SELECT DISTINCT(`Position Job Level`), COUNT(Gender) FROM Diversity WHERE GENDER = 1 GROUP BY `Position Job Level`; -- `Position Job Level` for M
+
+SELECT DISTINCT(`Position Job Level`), COUNT(Gender) FROM Diversity WHERE GENDER = 2 GROUP BY `Position Job Level`; -- `Position Job Level` for M
+
+SELECT `Position Job Level`, 
+       gender, 
+       COUNT(*) as count, 
+       (COUNT(*)/(SELECT COUNT(*) FROM Diversity WHERE `Position Job Level` = diversity.`Position Job Level`))*100 as percentage 
+FROM diversity
+GROUP BY `Position Job Level`, gender
+order by `Position Job Level`; -- Gender count by Position Job Level (M AND F)
+ 
+SELECT DISTINCT(`Line Manager ID`) FROM diversity; -- Checking for any relations / Distinct values / Grouped Values
+
+SELECT DISTINCT(`Job Level`) from Diversity ORDER BY `Job Level`;
+
+SELECT `Job Level`, 
+       gender, 
+       COUNT(*) as count, 
+       (COUNT(*)/(SELECT COUNT(*) FROM Diversity WHERE `Job Level` = diversity.`Job Level`))*100 as percentage 
+FROM diversity
+GROUP BY `Job Level`, gender
+order by `Job Level`;  -- Gender count by ungrouped Position Job Level (M AND F)
+
+
+SELECT * FROM diversity;
